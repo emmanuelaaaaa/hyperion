@@ -1,4 +1,4 @@
-### Hyperion
+### Hyperion data analysis
 
 Useful scripts for the analysis of hyperion data. 
 The segmentation and creation of masks has been precomputed and these scripts work on their output, which is a table of intensities per cell. 
