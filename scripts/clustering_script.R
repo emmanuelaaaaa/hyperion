@@ -152,7 +152,7 @@ save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, ".RDa
 ###########################
 ## plotting the heatmaps and abundance plots per sample
 
-one_plot_heatmap <- function(meta)  plotExprHeatmap(sce, by="cluster_id", k = meta, m = NULL,
+one_plot_heatmap <- function(meta)  plotExprHeatmap(sce, by="cluster_id", k = meta, m = NULL, features="type",
                  row_anno = TRUE, bars=T) #, draw_freqs = TRUE, scale=T)
 meta_plots_heat <- plyr::llply(meta_values, one_plot_heatmap)
 cat("Plotting the heatmap plots of the meta-clusters... \n")
@@ -168,17 +168,17 @@ meta_plots_exprs
 dev.off()
 
 if(length(sce@metadata$experiment_info$sample_id)>1) {
-	one_plot_abundance <- function(meta) plotAbundances(sce, k = meta, by = "cluster_id", group_by = "sample_name") 
+	one_plot_abundance <- function(meta) plotAbundances(sce, k = meta, by = "cluster_id", group_by = "sample_id") 
 	meta_plots_abund <- plyr::llply(meta_values, one_plot_abundance)
 	cat("Plotting the abundance plots of the meta-clusters... \n")
-	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_abundance_per_sample.pdf")), height=10, width=15)
+	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_abundance_per_sampleid.pdf")), height=10, width=15)
 	meta_plots_abund
 	dev.off()
 	if(length(unique(sce@metadata$experiment_info$sample_name))>1) {
-		one_plot_abundance_id <- function(meta) plotAbundances(sce, k = meta, by = "cluster_id", group_by = "sample_id") 
+		one_plot_abundance_id <- function(meta) plotAbundances(sce, k = meta, by = "cluster_id", group_by = "sample_name") 
 		meta_plots_abund_id <- plyr::llply(meta_values, one_plot_abundance_id)
 		cat("Plotting the abundance plots of the meta-clusters per sample_id... \n")
-		pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_abundance_per_sampleid.pdf")), height=10, width=15)
+		pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_abundance_per_sample.pdf")), height=10, width=15)
 		meta_plots_abund_id
 		dev.off()
 	}
@@ -190,7 +190,7 @@ if(length(sce@metadata$experiment_info$sample_id)>1) {
 if (!is.null(opt$outputtable)) {
 	cat("\nMaking the table for Zegami...\n")
 
-	my_mat <- t(assay(sce))
+	my_mat <- t(assay(sce, "exprs"))
 	my_dims <- cbind(reducedDims(sce)$TSNE, reducedDims(sce)$UMAP)
 	colnames(my_dims ) <- c("TSNE1","TSNE2","UMAP1","UMAP2")
 	other_vars <- sce@colData
@@ -224,7 +224,7 @@ if (!is.null(opt$outputtable)) {
 # saving
 session <- sessionInfo()
 cat("Saving in", file.path(opt$outdir, "RData", paste0("clustering_analysis_", opt$label, ".RData")),"\n")
-save(opt, session, fSOM, meta_plots_heat, meta_plots_abund,
+save(opt, session, fSOM, meta_plots_heat, 
      meta_plots_t, meta_plots_u,
     file=file.path(opt$outdir, "RData", paste0("clustering_analysis_", opt$label, ".RData")))
 ## the size of RData is getting too big and will make it very long to load, better to only keep the new stuff (the sce is stored on its own)

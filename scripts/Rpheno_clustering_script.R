@@ -44,9 +44,9 @@ colnames(sce_pheno) <- c("TSNE1","TSNE2", "UMAP1","UMAP2")
 
 ks <- c(15,30,50)
 for (k in ks) { 
-	R_pheno_out_all <- Rphenograph(t(assay(sce)), k=k)
-	R_pheno_out_noDNA <- Rphenograph(t(assay(sce))[,setdiff(rownames(sce),c("DNA1","DNA3"))], k=k)
-	R_pheno_out_noDNAH3 <- Rphenograph(t(assay(sce))[,setdiff(rownames(sce),c("DNA1","DNA3","H3"))], k=k)
+	R_pheno_out_all <- Rphenograph(t(assay(sce, "exprs")), k=k)
+	R_pheno_out_noDNA <- Rphenograph(t(assay(sce, "exprs"))[,setdiff(rownames(sce),c("DNA1","DNA3"))], k=k)
+	R_pheno_out_noDNAH3 <- Rphenograph(t(assay(sce, "exprs"))[,setdiff(rownames(sce),c("DNA1","DNA3","H3"))], k=k)
 
 # Modularity is one measure of the structure of networks or graphs. It was designed to measure the strength of division of a network into modules (clusters/communities).
 # Networks with high modularity have dense connections between the nodes within modules but sparse connections between nodes in different modules. Modularity is often used in optimization methods
@@ -90,7 +90,7 @@ paste_matrix <- function(a,mat,sep = "",collapse = NULL){
 if (opt$outputtable) {
 	cat("\nMaking the table for Zegami...\n")
 
-	my_mat <- t(assay(sce))
+	my_mat <- t(assay(sce, "exprs"))
 	my_dims <- cbind(reducedDims(sce)$TSNE, reducedDims(sce)$UMAP)
 	colnames(my_dims ) <- c("TSNE1","TSNE2","UMAP1","UMAP2")
 	other_vars <- sce@colData
