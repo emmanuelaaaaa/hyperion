@@ -65,7 +65,13 @@ antib_data <- data.frame()
 celldata <- data.frame()
 
 for (i in md_file$sample_id) { 
-	exp1 <- read.csv(file.path(opt$input_dir,i,"/Zegami/cellData.csv"), header=T, stringsAsFactors=F)
+
+	roi <- tolower(md_file[md_file$sample_id==i,]$ROI)
+	sample <- paste0("sample_", strsplit(i, split="_")[[1]][3])
+	cond <- tolower(strsplit(i, split="_")[[1]][1])
+	filename <- file.path(opt$input_dir, cond, sample, roi, "Zegami/cellData.csv")
+
+	exp1 <- read.csv(filename, header=T, stringsAsFactors=F)
 	exp1$X <- NULL
 	exp1$cellID_name <- gsub(".png", replacement="", exp1$Image.Name)
 	names(exp1) <- gsub("_mean", replacement="",names(exp1))
@@ -101,6 +107,8 @@ if (opt$transform) {
 		metadata=list(experiment_info=md_file)
 		)
 	sce <- CATALYST:::.transform(sce, 5) # asinh(value/5)
+	assay(sce, "scaled", FALSE) <- CATALYST:::.scale_exprs(assay(sce, "exprs"), 1, 0)
+	assay(sce, "scaledtrim", FALSE) <- CATALYST:::.scale_exprs(assay(sce, "exprs"), 1, 0.01)
 } else {
 	sce <- SingleCellExperiment(list(exprs=t(as.matrix(antib_data))),
     		colData=celldata,

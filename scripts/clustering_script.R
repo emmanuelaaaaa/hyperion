@@ -27,12 +27,14 @@ source("/t1-data/user/erepapi/Fellowship/COVID19_CyTOF/scripts/other_plots.R")
 # parsing the arguments
 option_list = list(
     make_option(c("--infile"), type="character", default=NULL, help="File that contains the sce object for which to do the clustering", metavar="character"),
+    make_option(c("--datatransf"), type="character", default="exprs",  help="Data transformation for running the clustering on. Options: counts=no transformation, exprs= arcsinh 
+		transformation, scaled=scaled transformation of the exprs, scaledtrim=the scaled and trimmed values (q=0.01) of the exprs. Can include more than one option 
+		in comma separated style, e.g. exprs,scaled. (default=exprs)"),
     make_option(c("--xdim"), type="integer", default=10,  help="xdim for FlowSOM"),
     make_option(c("--ydim"), type="integer", default=10,  help="ydim for FlowSOM"),
     make_option(c("--maxmeta"), type="integer", default=NULL,  help="maximum metaclusters for FlowSOM"),
     make_option(c("--outputtable"), type="logical", action="store_true", help="Include flag to create the Zegami table."),
     make_option(c("-o","--outdir"), type="character", default=NULL,  help="output directory", metavar="character"),
-    make_option(c("--outdirZegami"), type="character", default=NULL,  help="output directory for the Zegami table (to be same as input from preprocessing)", metavar="character"),
     make_option(c("--label"), type="character", default=NULL,  help="label for outputs")
 ); 
 
@@ -56,49 +58,52 @@ names(colData(sce))[names(colData(sce))=="x"] <- "LocX"
 names(colData(sce))[names(colData(sce))=="y"] <- "LocY"
 colData(sce)$sample_name <- sapply(colData(sce)$sample_id, function(x) strsplit(x, split="_")[[1]][1])
 
+datatransf <- unlist(strsplit(opt$datatransf, split=","))
 ###########################
 # running dimentionality reduction
 
-cat("Running dimentionality reduction... \n")
-cat("starting with TSNE... \n")
-sce <- runDR(sce, dr = "TSNE",  features = "type")
-cat("UMAP... \n")
-sce <- runDR(sce, dr = "UMAP", features = "type")
+for (i in datatransf) {
+	cat("Running dimentionality reduction for ", i, " ... \n")
+	cat("starting with TSNE... \n")
+	sce <- runDR(sce, dr = "TSNE",  features = "type", assay=i)
+	reducedDim(sce, paste0("TSNE_",i)) <- reducedDim(sce, "TSNE")
 
-if(length(sce@metadata$experiment_info$sample_id)>1) {
-	cat("Plotting the UMAP and TSNE plots by sample_name and sample_id... \n")
-	plot_tsne_c <-plotDR(sce, "TSNE", color_by = "sample_id")
-	plot_umap_c <-plotDR(sce, "UMAP", color_by = "sample_id")
+	cat("UMAP... \n")
+	sce <- runDR(sce, dr = "UMAP", features = "type", assay=i)
+	reducedDim(sce, paste0("UMAP_",i)) <- reducedDim(sce, "UMAP")
 
-	if(length(unique(sce@metadata$experiment_info$sample_name))>1) {
-		plot_tsne_b <-plotDR(sce, "TSNE", color_by = "sample_name")
-		plot_umap_b <-plotDR(sce, "UMAP", color_by = "sample_name")
+	if(length(sce@metadata$experiment_info$sample_id)>1) {
+		cat("Plotting the UMAP and TSNE plots by sample_name and sample_id... \n")
+		plot_tsne_c <-plotDR(sce, "TSNE", color_by = "sample_id")
+		plot_umap_c <-plotDR(sce, "UMAP", color_by = "sample_id")
+
+		if(length(unique(sce@metadata$experiment_info$sample_name))>1) {
+			plot_tsne_b <-plotDR(sce, "TSNE", color_by = "sample_name")
+			plot_umap_b <-plotDR(sce, "UMAP", color_by = "sample_name")
+			pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("TSNEUMAPpersample_", opt$label, ".pdf")), height=10, width=10)
+			    print(plot_tsne_b)
+			    print(plot_tsne_c)
+			    print(plot_umap_b)
+			    print(plot_umap_c)
+			dev.off()
+		} else {
 		pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("TSNEUMAPpersample_", opt$label, ".pdf")), height=10, width=10)
-		    print(plot_tsne_b)
 		    print(plot_tsne_c)
-		    print(plot_umap_b)
 		    print(plot_umap_c)
 		dev.off()
-	} else {
-	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("TSNEUMAPpersample_", opt$label, ".pdf")), height=10, width=10)
-	    print(plot_tsne_c)
-	    print(plot_umap_c)
-	dev.off()
+		}
 	}
 }
 
 ###########################
 ## FlowSOM clustering (with code from CATALYST, but not calling CATALYST:::cluster so that the MST can be build as well)
 
-panel_clustering <- list(allmarkers=rowData(sce)$channel_name, 
-			noDNA=setdiff(rowData(sce)$channel_name, c("DNA1", "DNA3")), 
-			noDNAH3=setdiff(rowData(sce)$channel_name, c("DNA1", "DNA3","H3")))
 meta_values <- paste0("meta",seq(from=(opt$maxmeta-10), to=opt$maxmeta, by=1))
 
-for (i in names(panel_clustering)) {
-	fSOM <- ReadInput(flowFrame(t(assay(sce, "exprs"))))
+for (i in datatransf) {
+	fSOM <- ReadInput(flowFrame(t(assay(sce, i))))
 	set.seed(123)
-	fSOM <- BuildSOM(fSOM, colsToUse=panel_clustering[[i]], xdim=opt$xdim, ydim=opt$ydim)
+	fSOM <- BuildSOM(fSOM, colsToUse=rowData(sce)$marker_name[rowData(sce)$marker_class=="type"], xdim=opt$xdim, ydim=opt$ydim)
 	fSOM <- BuildMST(fSOM, tSNE=TRUE)
 
 	# FlowSOM consensus clustering
@@ -121,8 +126,8 @@ for (i in names(panel_clustering)) {
 	## plotting the UMAP/TSNE
 
 	cat("Plotting the UMAP and TSNE plots with the meta-clusters... \n")
-	one_plot_tsne <- function(meta)  plotDR(sce, "TSNE", color_by = meta)
-	one_plot_umap <- function(meta)  plotDR(sce, "UMAP", color_by = meta)
+	one_plot_tsne <- function(meta)  plotDR(sce, paste0("TSNE_",i), color_by = meta)
+	one_plot_umap <- function(meta)  plotDR(sce, paste0("UMAP_",i), color_by = meta)
 	meta_plots_t <- plyr::llply(meta_values, one_plot_tsne)
 	meta_plots_u <- plyr::llply(meta_values, one_plot_umap) 
 
@@ -137,91 +142,57 @@ for (i in names(panel_clustering)) {
 	my_clusters2 <- as.data.frame(sapply(sce@metadata$cluster_codes, function(x) x[cluster_ids(sce)]))
 	my_clusters2$cellID <- colData(sce)$cellID
 	write.table(my_clusters2, file=file.path(opt$outdir, "output_tables/otherclusterings", paste0(opt$label, "_", i, "_clusters.txt")), quote=F, row.names=F, sep="\t")	
-}
 
-pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_plotstars.pdf")), height=8, width=12)
-for (i in (opt$maxmeta-10):opt$maxmeta ) {
-    PlotStars(fSOM, backgroundValues = as.factor(metadata(sce)$cluster_codes[,i]))
-}
-dev.off()
-
-###########################
-cat("Saving the sce object in ", file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, ".RData")),"\n")
-save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, ".RData")))
-
-###########################
-## plotting the heatmaps and abundance plots per sample
-
-one_plot_heatmap <- function(meta)  plotExprHeatmap(sce, by="cluster_id", k = meta, m = NULL, features="type",
-                 row_anno = TRUE, bars=T) #, draw_freqs = TRUE, scale=T)
-meta_plots_heat <- plyr::llply(meta_values, one_plot_heatmap)
-cat("Plotting the heatmap plots of the meta-clusters... \n")
-pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_heatmaps.pdf")), height=10, width=15)
-meta_plots_heat
-dev.off()
-
-one_plot_exprs <- function(meta) plotClusterExprs(sce, k = meta, features = "type") 
-meta_plots_exprs <- plyr::llply(meta_values, one_plot_exprs)
-cat("Plotting the expression density plots of the meta-clusters... \n")
-pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_exprsdens.pdf")), height=10, width=15)
-meta_plots_exprs
-dev.off()
-
-if(length(sce@metadata$experiment_info$sample_id)>1) {
-	one_plot_abundance <- function(meta) plotAbundances(sce, k = meta, by = "cluster_id", group_by = "sample_id") 
-	meta_plots_abund <- plyr::llply(meta_values, one_plot_abundance)
-	cat("Plotting the abundance plots of the meta-clusters... \n")
-	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_abundance_per_sampleid.pdf")), height=10, width=15)
-	meta_plots_abund
+	## plotting the flowsom plotstars
+	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_plotstars", "_", i, ".pdf")), height=8, width=12)
+	for (j in (opt$maxmeta-10):opt$maxmeta ) {
+	    PlotStars(fSOM, backgroundValues = as.factor(metadata(sce)$cluster_codes[,j]))
+	}
 	dev.off()
-	if(length(unique(sce@metadata$experiment_info$sample_name))>1) {
-		one_plot_abundance_id <- function(meta) plotAbundances(sce, k = meta, by = "cluster_id", group_by = "sample_name") 
-		meta_plots_abund_id <- plyr::llply(meta_values, one_plot_abundance_id)
-		cat("Plotting the abundance plots of the meta-clusters per sample_id... \n")
-		pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_abundance_per_sample.pdf")), height=10, width=15)
-		meta_plots_abund_id
+
+	## plotting the heatmaps, density and abundance plots per sample
+
+	cat("Plotting the heatmap, density and abundance plots with the meta-clusters... \n")
+	one_plot_heatmap <- function(meta)  plotExprHeatmap(sce, by="cluster_id", k = meta, m = NULL, features="type",
+		         row_anno = TRUE, bars=T) #, draw_freqs = TRUE, scale=T)
+	meta_plots_heat <- plyr::llply(meta_values, one_plot_heatmap)
+	cat("Plotting the heatmap plots of the meta-clusters... \n")
+	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_heatmaps", "_", i, ".pdf")), height=10, width=15)
+	print(meta_plots_heat)
+	dev.off()
+
+	one_plot_exprs <- function(meta) plotClusterExprs(sce, k = meta, features = "type") 
+	meta_plots_exprs <- plyr::llply(meta_values, one_plot_exprs)
+	cat("Plotting the expression density plots of the meta-clusters... \n")
+	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_exprsdens", "_", i,".pdf")), height=10, width=15)
+	print(meta_plots_exprs)
+	dev.off()
+
+	if(length(sce@metadata$experiment_info$sample_id)>1) {
+		one_plot_abundance <- function(meta) plotAbundances(sce, k = meta, by = "cluster_id", group_by = "sample_id") 
+		meta_plots_abund <- plyr::llply(meta_values, one_plot_abundance)
+		cat("Plotting the abundance plots of the meta-clusters... \n")
+		pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_abundance_per_sampleid", "_", i, ".pdf")), height=10, width=15)
+		meta_plots_abund
 		dev.off()
+		if(length(unique(sce@metadata$experiment_info$sample_name))>1) {
+			one_plot_abundance_id <- function(meta) plotAbundances(sce, k = meta, by = "cluster_id", group_by = "sample_name") 
+			meta_plots_abund_id <- plyr::llply(meta_values, one_plot_abundance_id)
+			cat("Plotting the abundance plots of the meta-clusters per sample_id... \n")
+			pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_abundance_per_sample", "_", i, ".pdf")), height=10, width=15)
+			meta_plots_abund_id
+			dev.off()
+		}
 	}
+
+
+	cat("Saving the sce object in ", file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, "_", i, ".RData")),"\n")
+	save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, "_", i, ".RData")))
+
 }
 
 ###########################
-## Creating table for Zegami
-
-if (!is.null(opt$outputtable)) {
-	cat("\nMaking the table for Zegami...\n")
-
-	my_mat <- t(assay(sce, "exprs"))
-	my_dims <- cbind(reducedDims(sce)$TSNE, reducedDims(sce)$UMAP)
-	colnames(my_dims ) <- c("TSNE1","TSNE2","UMAP1","UMAP2")
-	other_vars <- sce@colData
-	my_clusters2 <- sapply(sce@metadata$cluster_codes, function(x) x[cluster_ids(sce)])
-
-	paste_matrix <- function(a,mat,sep = "",collapse = NULL){
-		matnames <- colnames(mat)
-    		n <- nrow(mat)
-    		p <- ncol(mat)
-    		mat <- matrix(paste(a,mat,sep = sep,collapse = collapse),n,p)
-    		colnames(mat) <- matnames
-    		return(mat)
-	}
-	my_clusters2 <- paste_matrix("cl", my_clusters2)
-
-	Zeg_table <- cbind(other_vars[!is.na(my_dims[,1]) | !is.na(my_dims[,3]),],
-	    my_clusters2[!is.na(my_dims[,1]) | !is.na(my_dims[,3]),], 
-	    my_dims[!is.na(my_dims[,1]) | !is.na(my_dims[,3]),], 
-	    my_mat[!is.na(my_dims[,1]) | !is.na(my_dims[,3]),])
-
-	cat("The dimensions of the table for Zegami are ", dim(Zeg_table), "\n")
-	if(length(sce@metadata$experiment_info$sample_id)==1) {
-		filename <- file.path(opt$outdirZegami, sce@metadata$experiment_info$sample_id, "Zegami/cellDataWithClustering.csv")
-		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
-	} else {
-		write.table(Zeg_table, file=file.path(opt$outdir, "output_tables", paste0(opt$label, "_table.txt")), quote=F, row.names=F, sep="\t")
-	}
-}
-
-###########################
-# saving
+# saving the rest
 session <- sessionInfo()
 cat("Saving in", file.path(opt$outdir, "RData", paste0("clustering_analysis_", opt$label, ".RData")),"\n")
 save(opt, session, fSOM, meta_plots_heat, 
