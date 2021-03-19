@@ -7,20 +7,20 @@
 ###########################
 ## libraries 
 
-stopifnot(
-  require(optparse, quietly=T),
-  require(CATALYST, quietly=T),
-  require(flowCore, quietly=T),
-  require(dplyr, quietly=T),
-  require(SingleCellExperiment, quietly=T),
-  require(ConsensusClusterPlus, quietly=T),
-  require(FlowSOM, quietly=T),
-  require(ggplot2, quietly=T),
-  require(cowplot, quietly=T),
-  require(gridExtra, quietly=T),
-  require(purrr, quietly=T),
+suppressPackageStartupMessages({
+  require(optparse, quietly=T)
+  require(CATALYST, quietly=T)
+  require(flowCore, quietly=T)
+  require(dplyr, quietly=T)
+  require(SingleCellExperiment, quietly=T)
+  require(ConsensusClusterPlus, quietly=T)
+  require(FlowSOM, quietly=T)
+  require(ggplot2, quietly=T)
+  require(cowplot, quietly=T)
+  require(gridExtra, quietly=T)
+  require(purrr, quietly=T)
   require(tidyr, quietly=T)
-)
+})
 
 source("/t1-data/user/erepapi/Fellowship/COVID19_CyTOF/scripts/other_plots.R")
 

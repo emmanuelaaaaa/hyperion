@@ -7,18 +7,19 @@
 ###########################
 ## libraries 
 
-stopifnot(
-  require(optparse, quietly=T),
-  require(CATALYST, quietly=T),
-  require(flowCore, quietly=T),
-  require(dplyr, quietly=T),
-  require(SingleCellExperiment, quietly=T),
-  require(ggplot2, quietly=T),
-  require(cowplot, quietly=T),
-  require(gridExtra, quietly=T),
-  require(purrr, quietly=T),
+suppressPackageStartupMessages({
+  require(optparse, quietly=T)
+  require(CATALYST, quietly=T)
+  require(flowCore, quietly=T)
+  require(dplyr, quietly=T)
+  require(SingleCellExperiment, quietly=T)
+  require(ggplot2, quietly=T)
+  require(cowplot, quietly=T)
+  require(gridExtra, quietly=T)
+  require(purrr, quietly=T)
+  require(plyr, quietly=T)
   require(tidyr, quietly=T)
-)
+})
 
 # parsing the arguments
 option_list = list(
@@ -90,7 +91,7 @@ for (i in md_file$sample_id) {
 	celldata_temp <- select(exp1, setdiff(names(exp1),panel$channel_name))
 
 	antib_data <- rbind(antib_data, antib_data_temp)
-	celldata <- rbind(celldata, celldata_temp)
+	celldata <- rbind.fill(celldata, celldata_temp)
 
 	md_file[md_file$sample_id==i,"n_cells"] <-  nrow(exp1)
 }

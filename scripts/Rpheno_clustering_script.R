@@ -6,16 +6,16 @@
 ##
 ###########################
 # libraries 
-stopifnot(
-  require(optparse, quietly=T), #lib.loc = "/home/staff/erepapi/R/x86_64-pc-linux-gnu-library/3.6"),
-  require(CATALYST, quietly=T),
-  require(SingleCellExperiment, quietly=T),
-  require(Rphenograph, quietly=T),
-  require(dplyr, quietly=T),
-  require(cowplot, quietly=T),
-  require(gridExtra, quietly=T),
-  require(ggplot2, quietly=T)
-)
+suppressPackageStartupMessages({
+  	require(optparse, quietly=T)
+  	require(CATALYST, quietly=T)
+  	require(SingleCellExperiment, quietly=T)
+  	require(Rphenograph, quietly=T)
+  	require(dplyr, quietly=T)
+  	require(cowplot, quietly=T)
+  	require(gridExtra, quietly=T)
+  	require(ggplot2, quietly=T)
+})
 
 # parsing the arguments
 option_list = list(
@@ -46,6 +46,7 @@ datatransf <- unlist(strsplit(opt$datatransf, split=","))
 
 ks <- c(15,30,50)
 for (i in datatransf) {
+	cat("Running the Rphenograph for ",i," \n")	
 	cat("Loading",paste0(opt$infile_pref,"_",i,".RData"), " \n")	
 	load(paste0(opt$infile_pref,"_",i,".RData"))
 	sce_pheno <- data.frame(reducedDims(sce)[[paste0("TSNE_",i)]], reducedDims(sce)[[paste0("UMAP_",i)]])
@@ -58,7 +59,7 @@ for (i in datatransf) {
 		# Networks with high modularity have dense connections between the nodes within modules but sparse connections between nodes in different modules. Modularity is often used in optimization methods
 		# for detecting community structure in networks.
 		# It has been shown that modularity suffers a resolution limit and, therefore, it is unable to detect small communities.
-		cat("The modularity of the graph is ", modularity(R_pheno_out[[2]]), "\n")
+		cat("\n The modularity of the graph is ", modularity(R_pheno_out[[2]]), "\n")
 
 		sce[[paste0("phenograph_cluster_",i,"_k", k)]] <- factor(membership(R_pheno_out[[2]]))
 
@@ -147,6 +148,9 @@ if (opt$outputtable) {
 		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
 	} else {
 		cat("The samples coming from different conditions, there is no relevant folder for saving the zegami. \n")
+		filename <- file.path("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/output_tables", paste0(opt$label, "_Zegami.txt"))
+		cat("Writing the table in ", filename," instead. \n")
+		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
 	}
 
 }
