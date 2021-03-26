@@ -136,13 +136,13 @@ if (opt$outputtable) {
 		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
 		filename <- file.path(opt$outdirZegami, cond, sample, roi, "cellDataWithClustering.csv")
 		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
-	} else if(length(unique(sce@metadata$experiment_info$sample_name)==1)) {
+	} else if(length(unique(sce@metadata$experiment_info$sample_name))==1) {
 		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
 		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
 		filename <- file.path(opt$outdirZegami, cond, sample, "cellDataWithClustering.csv")
 		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
 
-	} else if(length(unique(sce@metadata$experiment_info$condition)==1)) {
+	} else if(length(unique(sce@metadata$experiment_info$condition))==1) {
 		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
 		filename <- file.path(opt$outdirZegami, cond, "cellDataWithClustering.csv")
 		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
