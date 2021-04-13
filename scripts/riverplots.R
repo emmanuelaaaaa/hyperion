@@ -39,6 +39,9 @@ if (any(is.null(opt$infile_dir),is.null(opt$infile_combined), is.null(opt$infile
   stop("Arguments missing.n", call.=FALSE)
 }
 
+cat("Using the options:\n")
+print(opt)
+
 ########### 
 ## loading the sce objects
 cat("Loading all the individual files... \n")
