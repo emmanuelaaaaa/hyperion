@@ -173,14 +173,14 @@ for (i in datatransf) {
 		meta_plots_abund <- plyr::llply(meta_values, one_plot_abundance)
 		cat("Plotting the abundance plots of the meta-clusters... \n")
 		pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_abundance_per_sampleid", "_", i, ".pdf")), height=10, width=15)
-		meta_plots_abund
+		print(meta_plots_abund)
 		dev.off()
 		if(length(unique(sce@metadata$experiment_info$sample_name))>1) {
 			one_plot_abundance_id <- function(meta) plotAbundances(sce, k = meta, by = "cluster_id", group_by = "sample_name") 
 			meta_plots_abund_id <- plyr::llply(meta_values, one_plot_abundance_id)
 			cat("Plotting the abundance plots of the meta-clusters per sample_id... \n")
 			pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("clustering_plots_abundance_per_sample", "_", i, ".pdf")), height=10, width=15)
-			meta_plots_abund_id
+			print(meta_plots_abund_id)
 			dev.off()
 		}
 	}
