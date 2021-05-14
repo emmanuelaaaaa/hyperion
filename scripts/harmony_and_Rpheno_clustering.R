@@ -145,7 +145,6 @@ for (i in datatransf) {
 	pall <- plot_grid(p1a,p1b,p1c,p1d, p2a,p2b,p2c,p2d, p3a,p3b,p3c,p3d, ncol=4)
 	ggsave(pall, filename=file.path(opt$outdir_fig, "figures", opt$label, paste0("harmonyInt_Rpheno_UMAP_", opt$label, "_",i,".png")), width = 30, height = 15, dpi = 300, type="cairo-png")
 
-	}
 }
 
 save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_harmonycorr_", opt$label, ".RData")))
@@ -168,7 +167,7 @@ if (opt$outputtable) {
 
 	my_dims <- data.frame(reducedDims(sce)[[1]])
 	colnames(my_dims) <- paste(names(reducedDims(sce))[1], c(1,2), sep="_")
-	for (i in 2:length(names(reducedDims(sce))) {
+	for (i in 2:length(names(reducedDims(sce)))) {
 		my_dims_temp <- data.frame(reducedDims(sce)[[i]])
 		colnames(my_dims_temp) <- paste(names(reducedDims(sce))[i], c(1,2), sep="_")
 		my_dims <- cbind(my_dims, my_dims_temp)
@@ -180,27 +179,27 @@ if (opt$outputtable) {
 	Zeg_table <- cbind(other_vars, my_dims, my_mat)
 
 	cat("The dimensions of the table for Zegami are ", dim(Zeg_table), "\n")
-	if(length(sce@metadata$experiment_info$sample_id)==1) {
-		roi <- tolower(sce@metadata$experiment_info$ROI)
-		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
-		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
-		filename <- file.path(opt$outdirZegami, cond, sample, roi, "cellDataWithClustering.csv")
-		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
-	} else if(length(unique(sce@metadata$experiment_info$sample_name))==1) {
-		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
-		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
-		filename <- file.path(opt$outdirZegami, cond, sample, "cellDataWithClustering.csv")
-		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
-
-	} else if(length(unique(sce@metadata$experiment_info$condition))==1) {
-		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
-		filename <- file.path(opt$outdirZegami, cond, "cellDataWithClustering.csv")
-		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
-	} else {
+#	if(length(sce@metadata$experiment_info$sample_id)==1) {
+#		roi <- tolower(sce@metadata$experiment_info$ROI)
+#		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
+#		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
+#		filename <- file.path(opt$outdirZegami, cond, sample, roi, "cellDataWithClustering_integrated.csv")
+#		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
+#	} else if(length(unique(sce@metadata$experiment_info$sample_name))==1) {
+#		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
+#		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
+#		filename <- file.path(opt$outdirZegami, cond, sample, "cellDataWithClustering_integrated.csv")
+#		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
+#
+#	} else if(length(unique(sce@metadata$experiment_info$condition))==1) {
+#		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
+#		filename <- file.path(opt$outdirZegami, cond, "cellDataWithClustering_integrated.csv")
+#		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
+#	} else {
 		cat("The samples coming from different conditions, there is no relevant folder for saving the zegami. \n")
 		filename <- file.path("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/output_tables", paste0(opt$label, "_Zegami.txt"))
 		cat("Writing the table in ", filename," instead. \n")
 		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
-	}
+#	}
 
 }
