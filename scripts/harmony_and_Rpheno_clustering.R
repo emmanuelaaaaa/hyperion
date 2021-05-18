@@ -41,8 +41,6 @@ if (any(is.null(opt$infile),is.null(opt$var),is.null(opt$outdir),is.null(opt$lab
   stop("Arguments missing.n", call.=FALSE)
 }
 
-source("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/github_scripts/scripts/plotting_functions.R")
-
 ###########################
 c30 <- c("dodgerblue2", "#E31A1C", # red
                 "green4",
@@ -179,27 +177,27 @@ if (opt$outputtable) {
 	Zeg_table <- cbind(other_vars, my_dims, my_mat)
 
 	cat("The dimensions of the table for Zegami are ", dim(Zeg_table), "\n")
-#	if(length(sce@metadata$experiment_info$sample_id)==1) {
-#		roi <- tolower(sce@metadata$experiment_info$ROI)
-#		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
-#		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
-#		filename <- file.path(opt$outdirZegami, cond, sample, roi, "cellDataWithClustering_integrated.csv")
-#		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
-#	} else if(length(unique(sce@metadata$experiment_info$sample_name))==1) {
-#		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
-#		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
-#		filename <- file.path(opt$outdirZegami, cond, sample, "cellDataWithClustering_integrated.csv")
-#		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
-#
-#	} else if(length(unique(sce@metadata$experiment_info$condition))==1) {
-#		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
-#		filename <- file.path(opt$outdirZegami, cond, "cellDataWithClustering_integrated.csv")
-#		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
-#	} else {
+	if(length(sce@metadata$experiment_info$sample_id)==1) {
+		roi <- tolower(sce@metadata$experiment_info$ROI)
+		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
+		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
+		filename <- file.path(opt$outdirZegami, cond, sample, roi, "cellDataWithClustering_integrated.csv")
+		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
+	} else if(length(unique(sce@metadata$experiment_info$sample_name))==1) {
+		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
+		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
+		filename <- file.path(opt$outdirZegami, cond, sample, "cellDataWithClustering_integrated.csv")
+		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
+
+	} else if(length(unique(sce@metadata$experiment_info$condition))==1) {
+		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
+		filename <- file.path(opt$outdirZegami, cond, "cellDataWithClustering_integrated.csv")
+		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
+	} else {
 		cat("The samples coming from different conditions, there is no relevant folder for saving the zegami. \n")
 		filename <- file.path("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/output_tables", paste0(opt$label, "_Zegami.txt"))
 		cat("Writing the table in ", filename," instead. \n")
 		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
-#	}
+	}
 
 }
