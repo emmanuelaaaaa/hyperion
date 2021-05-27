@@ -1,4 +1,4 @@
-makeZegami <- function(sce, output_dir, label,zegami_suffix="") {
+makeZegami <- function(sce, output_dir, label, zegami_suffix="") {
 	my_mat <- t(assay(sce, "exprs"))
 
 	my_dims <- data.frame(reducedDims(sce)[[1]])
