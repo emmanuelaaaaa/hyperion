@@ -97,11 +97,62 @@ for (i in datatransf) {
 
 ###########################
 ## Creating table for Zegami
+paste_matrix <- function(a,mat,sep = "",collapse = NULL){
+	matnames <- colnames(mat)
+	n <- nrow(mat)
+	p <- ncol(mat)
+	mat <- matrix(paste(a,mat,sep = sep,collapse = collapse),n,p)
+	colnames(mat) <- matnames
+	return(mat)
+}
 
 if (opt$outputtable) {
-	source("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/github_scripts/scripts/zegami_function.R")
 	cat("\nMaking the table for Zegami...\n")
-	makeZegami(sce, output_dir=opt$outdirZegami, label=opt$label, zegami_suffix="")
+
+	my_mat <- t(assay(sce, "exprs"))
+	if(length(datatransf)==1) {
+		my_dims <- data.frame(reducedDims(sce)[[paste0("TSNE_",datatransf)]], reducedDims(sce)[[paste0("UMAP_",datatransf)]])
+		colnames(my_dims ) <- paste0(c("TSNE1","TSNE2","UMAP1","UMAP2"),"_",datatransf)
+	} else {
+		my_dims <- data.frame(reducedDims(sce)[[paste0("TSNE_",datatransf[1])]], reducedDims(sce)[[paste0("UMAP_",datatransf[1])]],
+					reducedDims(sce)[[paste0("TSNE_",datatransf[2])]], reducedDims(sce)[[paste0("UMAP_",datatransf[2])]])
+		colnames(my_dims ) <- paste0(c("TSNE1","TSNE2","UMAP1","UMAP2"),"_",rep(datatransf,each=4))
+	}
+
+	other_vars <- sce@colData
+	other_vars[,grepl("phenograph", names(other_vars))] <- paste_matrix("cl", as.matrix(other_vars[,grepl("phenograph", names(other_vars))]))
+	my_clusters2 <- sapply(sce@metadata$cluster_codes, function(x) x[cluster_ids(sce)])
+	my_clusters2 <- paste_matrix("cl", my_clusters2)
+
+	Zeg_table <- cbind(other_vars[!is.na(my_dims[,1]) | !is.na(my_dims[,3]),],
+	    my_clusters2[!is.na(my_dims[,1]) | !is.na(my_dims[,3]),], 
+	    my_dims[!is.na(my_dims[,1]) | !is.na(my_dims[,3]),], 
+	    my_mat[!is.na(my_dims[,1]) | !is.na(my_dims[,3]),])
+
+	cat("The dimensions of the table for Zegami are ", dim(Zeg_table), "\n")
+	if(length(sce@metadata$experiment_info$sample_id)==1) {
+		roi <- tolower(sce@metadata$experiment_info$ROI)
+		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
+		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
+		filename <- file.path(opt$outdirZegami, cond, sample, roi, "cellDataWithClustering_Deepcell.csv")
+		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
+	} else if(length(unique(sce@metadata$experiment_info$sample_name))==1) {
+		sample <- paste0("sample_", strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][3])
+		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
+		filename <- file.path(opt$outdirZegami, cond, sample, "cellDataWithClustering_Deepcell.csv")
+		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
+
+	} else if(length(unique(sce@metadata$experiment_info$condition))==1) {
+		cond <- tolower(strsplit(sce@metadata$experiment_info$sample_name, split="_")[[1]][1])
+		filename <- file.path(opt$outdirZegami, cond, "cellDataWithClustering_Deepcell.csv")
+		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
+	} else {
+		cat("The samples coming from different conditions, there is no relevant folder for saving the zegami. \n")
+		filename <- file.path("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/output_tables", paste0(opt$label, "_Zegami.txt"))
+		cat("Writing the table in ", filename," instead. \n")
+		write.table(Zeg_table, file=filename, quote=F, row.names=F, sep="\t")
+	}
+
 }
 
 ###########################
