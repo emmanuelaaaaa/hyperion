@@ -26,7 +26,7 @@ option_list = list(
     make_option(c("--datatransf"), type="character", default="exprs",  help="Data transformation for running the clustering on. Options: counts=no transformation, exprs= arcsinh 
 		transformation, scaled=scaled transformation of the exprs, scaledtrim=the scaled and trimmed values (q=0.01) of the exprs. Can include more than one option 
 		in comma separated style, e.g. exprs,scaled. (default=exprs)"),
-    make_option(c("--var"), type="character", default=NULL, help="The var from the data that will be removed. It needs to be a column in colData."),
+    make_option(c("--var"), type="character", default=NULL, help="The var from the data that will be removed. It needs to be a column in colData. (e.g. sample_name or sample_id)"),
     make_option(c("--annot"), type="character", default=NULL,  help="File with annotations to be loaded for the plots.Can include more than one option with comma separated files (will be added as annotation2, etc).", metavar="character"),
     make_option(c("--outputtable"), type="logical", action="store_true", help="Include flag to create the Zegami table."),
     make_option(c("--outdirZegami"), type="character", default=NULL,  help="output directory for the Zegami table (to be same as input from preprocessing)", metavar="character"),
@@ -44,6 +44,7 @@ if (any(is.null(opt$infile),is.null(opt$var),is.null(opt$outdir),is.null(opt$lab
 source("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/github_scripts/scripts/plotting_functions.R")
 
 ###########################
+### setting up a better palette
 c30 <- c("dodgerblue2", "#E31A1C", # red
                 "green4",
                 "#6A3D9A", # purple
@@ -61,14 +62,15 @@ c30 <- c("dodgerblue2", "#E31A1C", # red
               )
 
 ###########################
-# loading the files and running the analysis
+### Create necessary folders
+
+if (!dir.exists(file.path(opt$outdir, "figures"))) dir.create(file.path(opt$outdir, "figures"), showWarnings = FALSE)
+if (!dir.exists(file.path(opt$outdir, "RData"))) dir.create(file.path(opt$outdir, "RData"), showWarnings = FALSE)
+
+### loading the files and running the analysis
 
 cat("Loading ",opt$infile, " \n")	
 load(opt$infile)
-
-if (opt$var=="sample") {
-	colData(sce)$sample <- sapply(colData(sce)$sample_id, function(x) substring(x, first=1, last=nchar(x)-6))
-}
 
 datatransf <- unlist(strsplit(opt$datatransf, split=","))
 
@@ -154,8 +156,7 @@ for (i in datatransf) {
 
 save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_harmonycorr_", opt$label, "_final.RData")))
 
-###########################
-## Creating table for Zegami
+### Creating table for Zegami
 
 if (opt$outputtable) {
 	source("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/github_scripts/scripts/zegami_function.R")

@@ -41,8 +41,14 @@ if (any(is.null(opt$input_dir),is.null(opt$panel_file),is.null(opt$metadata_file
   stop("Arguments missing.n", call.=FALSE)
 }
 
-########### import and process the data
-## NOTE: CUN4slide5COVIDHyperion3runA_s0_p4_r1_a1_ac: there was an error where the machine stopped early in the process - only 10% of sample collected, removed from the metadata file
+### Create necessary folders
+
+if (!dir.exists(file.path(opt$outdir, "figures/"))) dir.create(file.path(opt$outdir, "figures/"), showWarnings = FALSE)
+if (!dir.exists(file.path(opt$outdir, "figures/exploratory_plots"))) dir.create(file.path(opt$outdir, "figures/exploratory_plots"), showWarnings = FALSE)
+if (!dir.exists(file.path(opt$outdir, "RData"))) dir.create(file.path(opt$outdir, "RData"), showWarnings = FALSE)
+
+### import and process the data
+
 cat("Starting the preprocessing script... \n")
 panel <- read.table(opt$panel_file, header=T, stringsAsFactors=F)
 md_file <- read.table(opt$metadata_file, header=T, stringsAsFactors=F, sep="\t")
@@ -86,7 +92,7 @@ for (i in md_file$sample_id) {
     					geom_histogram()
 		ggsave(hist_plot, filename=file.path(opt$outdir, "figures/exploratory_plots", paste0(i, "_varshistograms.pdf")), width = 12, height = 8, dpi = 300)
 	}
-	# 
+
 	antib_data_temp <- select(exp1, panel$channel_name)
 	celldata_temp <- select(exp1, setdiff(names(exp1),panel$channel_name))
 
@@ -118,7 +124,10 @@ if (opt$transform) {
 	)
 }
 
-########### make the plots
+### add the sample as column, removing the ROI 
+colData(sce)$sample_name <- sapply(colData(sce)$sample_id, function(x) substring(x, first=1, last=nchar(x)-6))
+
+### make expression plots, number of cells, heatmap and PCAs
 expr_smoothhisto <- plotExprs(sce, color_by = "sample_id") 
 expr_heat <- plotExprHeatmap(sce)
 ncounts <- ggplot(metadata(sce)$experiment_info, aes(reorder(sample_id, -n_cells), n_cells, fill=condition)) + geom_bar(stat = "identity", width = 0.75) +
@@ -132,7 +141,7 @@ dev.off()
 # running the scaled and non-scaled PCA:
 if (length(unique(sce@metadata$experiment_info$sample_name))>1) {
 	cs_by_s <- split(seq_len(ncol(sce)), sce$sample_id)
-	es <- as.matrix(assay(sce, "exprs"))
+	es <- as.matrix(assay(sce, "exprs")[rowData(sce)$marker_name[rowData(sce)$marker_class=="type"],])
 	ms <- vapply(cs_by_s, function(cs) rowMedians(es[, cs, drop = FALSE]), 
  	       numeric(nrow(sce)))
 	rownames(ms) <- rownames(sce)
@@ -174,4 +183,8 @@ if (length(unique(sce@metadata$experiment_info$sample_name))>1) {
 	}
 }
 session <- sessionInfo()
-save(sce, panel, md_file, session, file=file.path(opt$outdir, "RData", paste0("sce_initial_",opt$label, ".RData")))
+
+cat("Creating the sce object in ", file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, ".RData")),"\n")
+save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, "_", i, ".RData")))
+
+save(panel, md_file, session, file=file.path(opt$outdir, "RData", paste0("sce_initial_",opt$label, ".RData")))

@@ -24,6 +24,7 @@ option_list = list(
     make_option(c("--datatransf"), type="character", default="exprs",  help="Data transformation for running the clustering on. Options: counts=no transformation, exprs= arcsinh 
 		transformation, scaled=scaled transformation of the exprs, scaledtrim=the scaled and trimmed values (q=0.01) of the exprs. Can include more than one option 
 		in comma separated style, e.g. exprs,scaled. (default=exprs)"),
+    make_option(c("--k"), type="integer", default=30,  help="k parameter for Rphenograph."),
     make_option(c("--outputtable"), type="logical", action="store_true", help="Include flag to create the Zegami table."),
     make_option(c("--outdirZegami"), type="character", default=NULL,  help="output directory for the Zegami table (to be same as input from preprocessing)", metavar="character"),
     make_option(c("--label"), type="character", default=NULL,  help="label for outputs")
@@ -44,42 +45,40 @@ source("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/github_scripts/scripts
 cat("Starting the clustering with Rphenograph... \n")
 datatransf <- unlist(strsplit(opt$datatransf, split=","))
 
-ks <- c(15,30,50)
+k <- opt$k
 for (i in datatransf) {
 	cat("Running the Rphenograph for ",i," \n")	
 	cat("Loading",paste0(opt$infile_pref,"_",i,".RData"), " \n")	
 	load(paste0(opt$infile_pref,"_",i,".RData"))
 	sce_pheno <- data.frame(reducedDims(sce)[[paste0("TSNE_",i)]], reducedDims(sce)[[paste0("UMAP_",i)]])
 	colnames(sce_pheno) <- paste0(c("TSNE1","TSNE2", "UMAP1","UMAP2"),"_",i)
-	for (k in ks) { 
 
-		R_pheno_out <- Rphenograph(t(assay(sce, i))[,rowData(sce)$marker_name[rowData(sce)$marker_class=="type"]], k=k)
+	R_pheno_out <- Rphenograph(t(assay(sce, i))[,rowData(sce)$marker_name[rowData(sce)$marker_class=="type"]], k=k)
 
-		# Modularity is one measure of the structure of networks or graphs. It was designed to measure the strength of division of a network into modules (clusters/communities).
-		# Networks with high modularity have dense connections between the nodes within modules but sparse connections between nodes in different modules. Modularity is often used in optimization methods
-		# for detecting community structure in networks.
-		# It has been shown that modularity suffers a resolution limit and, therefore, it is unable to detect small communities.
-		cat("\n The modularity of the graph is ", modularity(R_pheno_out[[2]]), "\n")
+	# Modularity is one measure of the structure of networks or graphs. It was designed to measure the strength of division of a network into modules (clusters/communities).
+	# Networks with high modularity have dense connections between the nodes within modules but sparse connections between nodes in different modules. Modularity is often used in optimization methods
+	# for detecting community structure in networks.
+	# It has been shown that modularity suffers a resolution limit and, therefore, it is unable to detect small communities.
+	cat("\n The modularity of the graph is ", modularity(R_pheno_out[[2]]), "\n")
 
-		sce[[paste0("phenograph_cluster_",i,"_k", k)]] <- factor(membership(R_pheno_out[[2]]))
+	sce[[paste0("phenograph_cluster_",i,"_k", k)]] <- factor(membership(R_pheno_out[[2]]))
 
-		one_plot_heatmap <- plotExprHeatmap_updated(sce, cluster_id=paste0("phenograph_cluster_",i,"_k", k),
-			features=rowData(sce)$marker_name[rowData(sce)$marker_class=="type"], row_anno = TRUE, bars=T) 
-		cat("Plotting the heatmap plots of the  phenograph clusters... \n")
-		pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("Rpheno_clustering_plots_heatmaps_",i,"_k", k,".pdf")), height=10, width=15)
-		print(one_plot_heatmap)
-		dev.off()
+	one_plot_heatmap <- plotExprHeatmap_updated(sce, cluster_id=paste0("phenograph_cluster_",i,"_k", k),
+		features=rowData(sce)$marker_name[rowData(sce)$marker_class=="type"], row_anno = TRUE, bars=T) 
+	cat("Plotting the heatmap plots of the  phenograph clusters... \n")
+	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("Rpheno_clustering_plots_heatmaps_",i,"_k", k,".pdf")), height=10, width=15)
+	print(one_plot_heatmap)
+	dev.off()
 
-		one_plot_exprs <- plotClusterExprs_updated(sce, cluster_id=paste0("phenograph_cluster_",i,"_k", k), features = rowData(sce)$marker_name[rowData(sce)$marker_class=="type"]) 
-		cat("Plotting the expression density plots of the phenograph clusters... \n")
-		pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("Rpheno_clustering_plots_exprsdens_",i,"_k", k,".pdf")), height=10, width=15)
-		print(one_plot_exprs)
-		dev.off()
+	one_plot_exprs <- plotClusterExprs_updated(sce, cluster_id=paste0("phenograph_cluster_",i,"_k", k), features = rowData(sce)$marker_name[rowData(sce)$marker_class=="type"]) 
+	cat("Plotting the expression density plots of the phenograph clusters... \n")
+	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("Rpheno_clustering_plots_exprsdens_",i,"_k", k,".pdf")), height=10, width=15)
+	print(one_plot_exprs)
+	dev.off()
 
-		assign(paste0("R_pheno_",i,"_k", k), R_pheno_out)
-	}
+	assign(paste0("R_pheno_",i,"_k", k), R_pheno_out)
 
-	pheno_ks <- paste0("phenograph_cluster_",i,"_k", ks)
+	pheno_ks <- paste0("phenograph_cluster_",i,"_k", k)
 	sce_pheno <- cbind(sce_pheno, sce@colData)
 	one_plot_tsne <- function(k)  ggplot(sce_pheno, aes_string(x=paste0("TSNE1_",i), y=paste0("TSNE2_",i), col=k)) + geom_point(size = 1)+theme_bw()
 	one_plot_umap <- function(k)  ggplot(sce_pheno, aes_string(x=paste0("UMAP1_",i), y=paste0("UMAP2_",i), col=k)) + geom_point(size = 1)+theme_bw()
@@ -106,7 +105,7 @@ if (opt$outputtable) {
 
 ###########################
 # saving
-rm(ks, my_mat, other_vars, my_clusters2, Zeg_table)
+rm(my_mat, other_vars, my_clusters2, Zeg_table)
 session <- sessionInfo()
 save.image(file=file.path(opt$outdir, "RData", paste0("Rpheno_", opt$label, ".RData")))
 
