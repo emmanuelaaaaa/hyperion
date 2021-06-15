@@ -46,6 +46,7 @@ if (any(is.null(opt$input_dir),is.null(opt$panel_file),is.null(opt$metadata_file
 if (!dir.exists(file.path(opt$outdir, "figures/"))) dir.create(file.path(opt$outdir, "figures/"), showWarnings = FALSE)
 if (!dir.exists(file.path(opt$outdir, "figures/exploratory_plots"))) dir.create(file.path(opt$outdir, "figures/exploratory_plots"), showWarnings = FALSE)
 if (!dir.exists(file.path(opt$outdir, "RData"))) dir.create(file.path(opt$outdir, "RData"), showWarnings = FALSE)
+if (!dir.exists(file.path(opt$outdir, "figures", opt$label))) dir.create(file.path(opt$outdir, "figures", opt$label), showWarnings = FALSE)
 
 ### import and process the data
 
@@ -143,8 +144,8 @@ if (length(unique(sce@metadata$experiment_info$sample_name))>1) {
 	cs_by_s <- split(seq_len(ncol(sce)), sce$sample_id)
 	es <- as.matrix(assay(sce, "exprs")[rowData(sce)$marker_name[rowData(sce)$marker_class=="type"],])
 	ms <- vapply(cs_by_s, function(cs) rowMedians(es[, cs, drop = FALSE]), 
- 	       numeric(nrow(sce)))
-	rownames(ms) <- rownames(sce)
+ 	       numeric(length(which(rowData(sce)$marker_class=="type"))))
+	rownames(ms) <- rowData(sce)$marker_name[rowData(sce)$marker_class=="type"]
 	md1 <- metadata(sce)$experiment_info
 
 	for (scaling in c(T,F)) {
@@ -182,9 +183,58 @@ if (length(unique(sce@metadata$experiment_info$sample_name))>1) {
 
 	}
 }
+
+### running dimentionality reduction
+
+if (opt$transform) {
+	for (i in c("exprs","scaled","scaledtrim")) {
+		cat("Running dimentionality reduction for ", i, " ... \n")
+		cat("starting with TSNE... \n")
+		sce <- runDR(sce, dr = "TSNE",  features = "type", assay=i)
+		reducedDim(sce, paste0("TSNE_",i)) <- reducedDim(sce, "TSNE")
+
+		cat("UMAP... \n")
+		sce <- runDR(sce, dr = "UMAP", features = "type", assay=i)
+		reducedDim(sce, paste0("UMAP_",i)) <- reducedDim(sce, "UMAP")
+
+	}
+} else {
+	cat("Running dimentionality reduction for exprs ... \n")
+	cat("starting with TSNE... \n")
+	sce <- runDR(sce, dr = "TSNE",  features = "type", assay="exprs")
+
+	cat("UMAP... \n")
+	sce <- runDR(sce, dr = "UMAP", features = "type", assay="exprs")
+
+}
+
+save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, ".RData")))
+
+if(length(sce@metadata$experiment_info$sample_id)>1) {
+	cat("Plotting the UMAP and TSNE plots by sample_name and sample_id... \n")
+	plot_tsne_c <-plotDR(sce, "TSNE_exprs", color_by = "sample_id")
+	plot_umap_c <-plotDR(sce, "UMAP_exprs", color_by = "sample_id")
+
+	if(length(unique(sce@metadata$experiment_info$sample_name))>1) {
+		plot_tsne_b <-plotDR(sce, "TSNE_exprs", color_by = "sample_name")
+		plot_umap_b <-plotDR(sce, "UMAP_exprs", color_by = "sample_name")
+		pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("TSNEUMAPpersample_", opt$label, ".pdf")), height=10, width=10)
+		    print(plot_tsne_b)
+		    print(plot_tsne_c)
+		    print(plot_umap_b)
+		    print(plot_umap_c)
+		dev.off()
+	} else {
+	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("TSNEUMAPpersample_", opt$label, ".pdf")), height=10, width=10)
+	    print(plot_tsne_c)
+	    print(plot_umap_c)
+	dev.off()
+	}
+}
+
 session <- sessionInfo()
 
 cat("Creating the sce object in ", file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, ".RData")),"\n")
-save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, "_", i, ".RData")))
+save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, ".RData")))
 
 save(panel, md_file, session, file=file.path(opt$outdir, "RData", paste0("sce_initial_",opt$label, ".RData")))

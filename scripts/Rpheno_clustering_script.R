@@ -27,6 +27,7 @@ option_list = list(
     make_option(c("--k"), type="integer", default=30,  help="k parameter for Rphenograph."),
     make_option(c("--outputtable"), type="logical", action="store_true", help="Include flag to create the Zegami table."),
     make_option(c("--outdirZegami"), type="character", default=NULL,  help="output directory for the Zegami table (to be same as input from preprocessing)", metavar="character"),
+    make_option(c("--zegami_suffix"), type="character", default=NULL,  help="output suffix name for the Zegami table (to distinguish between runs)", metavar="character"),
     make_option(c("--label"), type="character", default=NULL,  help="label for outputs")
 ); 
  
@@ -38,18 +39,25 @@ if (any(is.null(opt$infile_pref),is.null(opt$outdir),is.null(opt$label))) {
   stop("Arguments missing.n", call.=FALSE)
 }
 
+if (is.null(opt$zegami_suffix)) {
+	zegami_suffix <- ""
+} else {
+	zegami_suffix <- opt$zegami_suffix
+}
+
 source("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/github_scripts/scripts/plotting_functions.R")
 
 ###########################
 # loading the files and running the analysis
+cat("Loading",paste0(opt$infile_pref,".RData"), " \n")	
+load(paste0(opt$infile_pref,".RData"))
+
 cat("Starting the clustering with Rphenograph... \n")
 datatransf <- unlist(strsplit(opt$datatransf, split=","))
 
 k <- opt$k
 for (i in datatransf) {
 	cat("Running the Rphenograph for ",i," \n")	
-	cat("Loading",paste0(opt$infile_pref,"_",i,".RData"), " \n")	
-	load(paste0(opt$infile_pref,"_",i,".RData"))
 	sce_pheno <- data.frame(reducedDims(sce)[[paste0("TSNE_",i)]], reducedDims(sce)[[paste0("UMAP_",i)]])
 	colnames(sce_pheno) <- paste0(c("TSNE1","TSNE2", "UMAP1","UMAP2"),"_",i)
 
@@ -89,10 +97,11 @@ for (i in datatransf) {
 	    print(meta_plots_t)
 	    print(meta_plots_u)
 	dev.off()
-	cat("Updating the sce object in ", file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, ".RData")),"\n")
-	save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, "_", i, ".RData")))
 
 }
+
+cat("Updating the sce object in ", file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, ".RData")),"\n")
+save(sce, file=file.path(opt$outdir, "RData", paste0("sceobj_", opt$label, ".RData")))
 
 ###########################
 ## Creating table for Zegami
@@ -100,12 +109,11 @@ for (i in datatransf) {
 if (opt$outputtable) {
 	source("/t1-data/user/erepapi/Fellowship/Hyperion/COVID19/github_scripts/scripts/zegami_function.R")
 	cat("\nMaking the table for Zegami...\n")
-	makeZegami(sce, output_dir=opt$outdirZegami, label=opt$label, zegami_suffix="")
+	makeZegami(sce, output_dir=opt$outdirZegami, label=opt$label, zegami_suffix=zegami_suffix)
 }
 
 ###########################
 # saving
-rm(my_mat, other_vars, my_clusters2, Zeg_table)
 session <- sessionInfo()
 save.image(file=file.path(opt$outdir, "RData", paste0("Rpheno_", opt$label, ".RData")))
 
