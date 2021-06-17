@@ -1,4 +1,5 @@
 library(CATALYST)
+library(ggplot2)
 library(circlize)
 library(ComplexHeatmap)
 library(RColorBrewer)
@@ -69,3 +70,67 @@ plotClusterExprs_updated <- function (x, cluster_id = "cluster_id", features = "
         theme(legend.position = "none", strip.background = element_blank(), 
             strip.text = element_text(face = "bold"))
 }
+
+plotAbundances_updated <- function (x, cluster_id, by = c("sample_id", "cluster_id"), 
+    group_by = "condition", shape_by = NULL, col_clust = TRUE, 
+    distance = c("euclidean", "maximum", "manhattan", "canberra", 
+        "binary", "minkowski"), linkage = c("average", "ward.D", 
+        "single", "complete", "mcquitty", "median", "centroid", 
+        "ward.D2"), k_pal = CATALYST:::.cluster_cols) 
+{
+    x$cluster_id <- x[[cluster_id]]
+    by <- match.arg(by)
+    linkage <- match.arg(linkage)
+    distance <- match.arg(distance)
+    stopifnot(is.logical(col_clust), length(col_clust) == 1)
+    shapes <- CATALYST:::.get_shapes(x, shape_by)
+    if (is.null(shapes)) 
+        shape_by <- NULL
+    if (by == "sample_id") {
+        nk <- nlevels(x[[cluster_id]])
+        if (length(k_pal) < nk) 
+            k_pal <- colorRampPalette(k_pal)(nk)
+    }
+    ns <- table(cluster_id = x[[cluster_id]], sample_id = sample_ids(x))
+    fq <- prop.table(ns, 2) * 100
+    df <- as.data.frame(fq)
+    m <- match(df$sample_id, x$sample_id)
+    for (i in c(shape_by, group_by)) df[[i]] <- x[[i]][m]
+    if (by == "sample_id" && col_clust && length(unique(df$sample_id)) > 
+        1) {
+        d <- dist(t(fq), distance)
+        h <- hclust(d, linkage)
+        o <- colnames(fq)[h$order]
+        df$sample_id <- factor(df$sample_id, o)
+    }
+    p <- ggplot(df, aes_string(y = "Freq")) + labs(x = NULL, 
+        y = "Proportion [%]") + theme_bw() + theme(panel.grid = element_blank(), 
+        strip.text = element_text(face = "bold"), strip.background = element_rect(fill = NA, 
+            color = NA), axis.text = element_text(color = "black"), 
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), 
+        legend.key.height = unit(0.8, "lines"))
+    switch(by, sample_id = p + (if (!is.null(group_by)) facet_wrap(group_by, 
+        scales = "free_x")) + geom_bar(aes_string(x = "sample_id", 
+        fill = "cluster_id"), position = "fill", stat = "identity") + 
+        scale_fill_manual("cluster_id", values = k_pal) + scale_x_discrete(expand = c(0, 
+        0)) + scale_y_continuous(expand = c(0, 0), labels = seq(0, 
+        100, 25)) + theme(panel.border = element_blank(), panel.spacing.x = unit(1, 
+        "lines")), cluster_id = {
+        p <- p + scale_shape_manual(values = shapes) + guides(col = guide_legend(order = 1, 
+            override.aes = list(size = 3)), shape = guide_legend(override.aes = list(size = 3)))
+        if (is.null(group_by)) {
+            p + geom_boxplot(aes_string(x = "cluster_id"), alpha = 0.2, 
+                position = position_dodge(), outlier.color = NA) + 
+                geom_point(aes_string("cluster_id", shape = shape_by), 
+                  position = position_jitter(width = 0.2))
+        } else {
+            p + facet_wrap("cluster_id", scales = "free_y", ncol = 4) + 
+                geom_boxplot(aes_string(x = group_by, color = group_by, 
+                  fill = group_by), position = position_dodge(), 
+                  alpha = 0.2, outlier.color = NA, show.legend = FALSE) + 
+                geom_point(aes_string(x = group_by, col = group_by, 
+                  shape = shape_by), position = position_jitter(width = 0.2))
+        }
+    })
+}
+

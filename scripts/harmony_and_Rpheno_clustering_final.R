@@ -27,7 +27,7 @@ option_list = list(
 		transformation, scaled=scaled transformation of the exprs, scaledtrim=the scaled and trimmed values (q=0.01) of the exprs. Can include more than one option 
 		in comma separated style, e.g. exprs,scaled. (default=exprs)"),
     make_option(c("--var"), type="character", default=NULL, help="The var from the data that will be removed. It needs to be a column in colData. (e.g. sample_name or sample_id)"),
-    make_option(c("--annot"), type="character", default=NULL,  help="File with annotations to be loaded for the plots.Can include more than one option with comma separated files (will be added as annotation2, etc).", metavar="character"),
+    make_option(c("--annot"), type="character", default=NULL,  help="File with annotations to be loaded for the plots.Can include more than one option with comma separated files (will be added as annotation2, etc). (optional)", metavar="character"),
     make_option(c("--outputtable"), type="logical", action="store_true", help="Include flag to create the Zegami table."),
     make_option(c("--outdirZegami"), type="character", default=NULL,  help="output directory for the Zegami table (to be same as input from preprocessing)", metavar="character"),
     make_option(c("--label"), type="character", default=NULL,  help="label for outputs")
@@ -144,6 +144,14 @@ for (i in datatransf) {
 	cat("Plotting the expression density plots of the phenograph clusters... \n")
 	pdf(file=file.path(opt$outdir_fig, "figures", opt$label, paste0("Rpheno_harmonyInt_exprsdens_",i,".pdf")), height=10, width=15)
 	print(one_plot_exprs)
+	dev.off()
+
+	one_plot_abund_box <- plotAbundances_updated(sce, cluster_id=paste0("harmony_pca", pca,"_phenograph_cluster_",i,"_k30"), group_by="sample_name", by="cluster_id" ) 
+	one_plot_abund_stripe <- plotAbundances_updated(sce, cluster_id=paste0("phenograph_cluster_",i,"_k30"), group_by="sample_name", by="sample_id") 
+	cat("Plotting the cluster abundances of the phenograph clusters per sample... \n")
+	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("Rpheno_harmonyInt_abund_",i,"_k30.pdf")), height=10, width=15)
+	print(one_plot_abund_box)
+	print(one_plot_abund_stripe)
 	dev.off()
 
 	if(opt$outdir_fig!=opt$outdir_fig) {

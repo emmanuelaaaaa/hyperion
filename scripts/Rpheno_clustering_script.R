@@ -84,6 +84,14 @@ for (i in datatransf) {
 	print(one_plot_exprs)
 	dev.off()
 
+	one_plot_abund_box <- plotAbundances_updated(sce, cluster_id=paste0("phenograph_cluster_",i,"_k", k), group_by="sample_name", by="cluster_id" ) 
+	one_plot_abund_stripe <- plotAbundances_updated(sce, cluster_id=paste0("phenograph_cluster_",i,"_k", k), group_by="sample_name", by="sample_id") 
+	cat("Plotting the cluster abundances of the phenograph clusters per sample... \n")
+	pdf(file=file.path(opt$outdir, "figures", opt$label, paste0("Rpheno_clustering_plots_abund_",i,"_k", k,".pdf")), height=10, width=15)
+	print(one_plot_abund_box)
+	print(one_plot_abund_stripe)
+	dev.off()
+
 	assign(paste0("R_pheno_",i,"_k", k), R_pheno_out)
 
 	pheno_ks <- paste0("phenograph_cluster_",i,"_k", k)

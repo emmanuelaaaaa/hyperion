@@ -127,6 +127,7 @@ if (opt$transform) {
 
 ### add the sample as column, removing the ROI 
 colData(sce)$sample_name <- sapply(colData(sce)$sample_id, function(x) substring(x, first=1, last=nchar(x)-6))
+colData(sce)$condition <- sapply(colData(sce)$sample_name, function(x) substring(x, first=1, last=nchar(x)-9))
 
 ### make expression plots, number of cells, heatmap and PCAs
 expr_smoothhisto <- plotExprs(sce, color_by = "sample_id") 
@@ -185,6 +186,9 @@ if (length(unique(sce@metadata$experiment_info$sample_name))>1) {
 }
 
 ### running dimentionality reduction
+##changing the names of the location x,y because it's interfering with the UMAP/TSNE
+names(colData(sce))[names(colData(sce))=="x"] <- "LocX"
+names(colData(sce))[names(colData(sce))=="y"] <- "LocY"
 
 if (opt$transform) {
 	for (i in c("exprs","scaled","scaledtrim")) {
